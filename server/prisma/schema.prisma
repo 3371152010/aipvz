@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  nickname     String
+  avatarUrl    String?  @map("avatar_url")
+  role         String   @default("USER")
+  coins        Int      @default(0)
+  gems         Int      @default(0)
+  plantSlots   Int      @default(7) @map("plant_slots")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  levelProgress LevelProgress[]
+  userPlants    UserPlant[]
+  userItems     UserItem[]
+  battleHistory BattleHistory[]
+  matchRecords  MatchRecord[] @relation("Player1")
+  matchRecords2 MatchRecord[] @relation("Player2")
+
+  @@map("users")
+}
+
+model Level {
+  id          String   @id @default(uuid())
+  world       Int
+  levelNumber Int      @map("level_number")
+  name        String
+  configJson  String   @map("config_json")
+  unlockCost  Int      @default(0) @map("unlock_cost")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  progress LevelProgress[]
+
+  @@unique([world, levelNumber])
+  @@map("levels")
+}
+
+model LevelProgress {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  levelId    String   @map("level_id")
+  stars      Int      @default(0)
+  completed  Boolean  @default(false)
+  bestTime   Int?     @map("best_time")
+  plantsLost Int      @default(0) @map("plants_lost")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  level Level @relation(fields: [levelId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, levelId])
+  @@map("level_progress")
+}
+
+model UserPlant {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  plantId    Int      @map("plant_id")
+  unlockedAt DateTime @default(now()) @map("unlocked_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, plantId])
+  @@map("user_plants")
+}
+
+model Item {
+  id         String @id @default(uuid())
+  name       String
+  type       String
+  priceCoins Int    @default(0) @map("price_coins")
+  priceGems  Int    @default(0) @map("price_gems")
+  effectJson String @default("{}") @map("effect_json")
+
+  userItems UserItem[]
+
+  @@map("items")
+}
+
+model UserItem {
+  id       String @id @default(uuid())
+  userId   String @map("user_id")
+  itemId   String @map("item_id")
+  quantity Int    @default(1)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId])
+  @@map("user_items")
+}
+
+model BattleHistory {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  levelId     String   @map("level_id")
+  won         Boolean
+  stars       Int      @default(0)
+  plantsUsed  String   @map("plants_used")
+  plantsLost  Int      @default(0) @map("plants_lost")
+  durationSec Int      @map("duration_sec")
+  coinsEarned Int      @default(0) @map("coins_earned")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("battle_history")
+}
+
+model MatchRecord {
+  id        String   @id @default(uuid())
+  player1Id String   @map("player1_id")
+  player2Id String   @map("player2_id")
+  winnerId  String?  @map("winner_id")
+  p1Stats   String   @map("p1_stats")
+  p2Stats   String   @map("p2_stats")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  player1 User @relation("Player1", fields: [player1Id], references: [id])
+  player2 User @relation("Player2", fields: [player2Id], references: [id])
+
+  @@map("match_records")
+}
